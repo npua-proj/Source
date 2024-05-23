@@ -101,7 +101,7 @@ jobs:
     - name: Push Docker image
       env:
         VERSION: ${{ needs.calculate-version.outputs.version }}
-        DOCKER_REPOSITORY: ${{ secrets.DOCKER_REPOSITORY }}
+        DOCKER_REPOSITORY: ${{ vars.DOCKER_REPOSITORY }}
       run: |
         echo "Pushing Docker image to repository: $DOCKER_REPOSITORY:$VERSION"
         docker images
