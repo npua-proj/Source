@@ -152,7 +152,7 @@ jobs:
         ssh -o StrictHostKeyChecking=no -i ec2_key.pem $EC2_USER@$EC2_HOST << EOF
           echo "Stopping current Docker container..."
           docker stop podcaster || true
-          docker rm my_container || true
+          docker rm podcaster || true
           echo "Pulling new Docker image..."
           docker pull $DOCKER_REPOSITORY:$VERSION
           echo "Starting new Docker container..."
