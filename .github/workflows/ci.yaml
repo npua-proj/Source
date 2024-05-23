@@ -132,8 +132,7 @@ jobs:
   
   deploy:
     runs-on: ubuntu-latest
-    needs: push-docker
-
+    needs:   build-push-docker
     steps:
     - name: Install SSH Client
       run: |
