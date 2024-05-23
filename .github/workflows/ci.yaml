@@ -118,5 +118,6 @@ jobs:
         VERSION: ${{ needs.calculate-version.outputs.version }}
         PAT_GITHUB: ${{ secrets.PAT_GITHUB }}
       run: |
+        echo "Tagging version: $VERSION"
         git tag -a v$VERSION -m "Release version $VERSION"
         git push https://$PAT_GITHUB@github.com/npua-proj/Source.git --tags
