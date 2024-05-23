@@ -13,30 +13,19 @@ on:
       - feature/*
 
 jobs:
-  build:
+  calculate-version:
     runs-on: ubuntu-latest
 
     steps:
     - name: Checkout code
       uses: actions/checkout@v2
+      with:
+        token: ${{ secrets.PAT_GITHUB }}
 
     - name: Set up Python
       uses: actions/setup-python@v2
       with:
         python-version: '3.x'
-
-    - name: Set up Docker Buildx
-      uses: docker/setup-buildx-action@v2
-
-    - name: Log in to Docker Hub
-      uses: docker/login-action@v2
-      with:
-        username: ${{ secrets.DOCKER_USERNAME }}
-        password: ${{ secrets.DOCKER_PASSWORD }}
-
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
 
     - name: Calculate version
       id: version
@@ -69,20 +58,74 @@ jobs:
         echo $NEW_VERSION > $VERSION_FILE
         echo "::set-output name=version::$NEW_VERSION"
 
-    - name: Build and push Docker image
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+
+  build-push-docker:
+    runs-on: ubuntu-latest
+    needs: calculate-version
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v2
+      with:
+        token: ${{ secrets.PAT_GITHUB }}
+
+    - name: Checkout code
+      uses: actions/checkout@v2
+      with:
+        token: ${{ secrets.PAT_GITHUB }}
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v2
+
+    - name: Log in to Docker Hub
+      uses: docker/login-action@v2
+      with:
+        username: ${{ secrets.DOCKER_USERNAME }}
+        password: ${{ secrets.DOCKER_PASSWORD }}
+
+    - name: Push Docker image
       env:
-        VERSION: ${{ steps.version.outputs.version }}
-        DOCKER_REPOSITORY: ${{ secrets.DOCKER_REPOSITORY }}
+        VERSION: ${{ needs.calculate-version.outputs.version }}
+        DOCKER_REPOSITORY: ${{ vars.DOCKER_REPOSITORY }}
       run: |
+        echo "Pushing Docker image to repository: $DOCKER_REPOSITORY:$VERSION"
         docker build -t $DOCKER_REPOSITORY:$VERSION .
         docker push $DOCKER_REPOSITORY:$VERSION
 
-    - name: Push version tag to GitHub
-      env:
-        VERSION: ${{ steps.version.outputs.version }}
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  tag-repo:
+    runs-on: ubuntu-latest
+    needs: calculate-version
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v2
+      with:
+        token: ${{ secrets.PAT_GITHUB }}
+
+    - name: Configure Git
       run: |
         git config --global user.name 'github-actions'
         git config --global user.email 'github-actions@github.com'
+
+    - name: Check if tag exists
+      id: check_tag
+      run: |
+        TAG_EXISTS=$(git ls-remote --tags origin | grep "refs/tags/v${{ needs.calculate-version.outputs.version }}$")
+        if [ -n "$TAG_EXISTS" ]; then
+          echo "Tag v${{ needs.calculate-version.outputs.version }} already exists."
+          echo "::set-output name=tag_exists::true"
+        else
+          echo "::set-output name=tag_exists::false"
+        fi
+
+    - name: Tag version
+      if: steps.check_tag.outputs.tag_exists == 'false'
+      env:
+        VERSION: ${{ needs.calculate-version.outputs.version }}
+        PAT_GITHUB: ${{ secrets.PAT_GITHUB }}
+      run: |
+        echo "Tagging version: $VERSION"
         git tag -a v$VERSION -m "Release version $VERSION"
-        git push --tags
+        git push https://$PAT_GITHUB@github.com/npua-proj/Source.git --tags
