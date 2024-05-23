@@ -84,7 +84,7 @@ jobs:
 
   push-docker:
     runs-on: ubuntu-latest
-    needs: build-docker
+    needs: [build-docker, calculate-version]
 
     steps:
     - name: Checkout code
