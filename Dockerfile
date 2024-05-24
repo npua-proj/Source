@@ -1,21 +1,20 @@
-# Use a lightweight Python base image
-FROM python:3.10-slim
-
-# Set environment variables to prevent Python from writing .pyc files and buffering stdout/stderr
-ENV PYTHONUNBUFFERED=1
-ENV PYTHONDONTWRITEBYTECODE=1
+# Use an official Python runtime as a parent image
+FROM python:3.9-slim
 
 # Set the working directory
-WORKDIR /app
+WORKDIR /usr/src/app
 
-# Copy the requirements file
-COPY requirements.txt .
-
-# Install the dependencies
-RUN pip install --no-cache-dir -r requirements.txt
-
-# Copy the application code
+# Copy the current directory contents into the container, excluding the venv directory
 COPY . .
 
-# Run the bot
-CMD ["python", "main.py"]
+# Install any needed packages specified in requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Make port 80 available to the world outside this container
+EXPOSE 80
+
+# Define environment variable
+ENV PYTHONUNBUFFERED=1
+
+# Run the bot.py script as a module
+ENTRYPOINT ["python", "-m", "app.bot"]
